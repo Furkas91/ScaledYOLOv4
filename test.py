@@ -179,7 +179,7 @@ def test(data,
                                     break
 
             # Append statistics (correct, conf, pcls, tcls)
-            stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
+            stats.append((correct, pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
         # Plot images
         if batch_i < 1:
@@ -189,7 +189,25 @@ def test(data,
             plot_images(img, output_to_target(output, width, height), paths, str(f), names)  # predictions
 
     # Compute statistics
-    stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+    new_stats = []
+    for x in zip(*stats):
+#         print(type(x))
+#         print(x)
+        new_x_list = []
+        for ix in x:
+            if isinstance(ix, torch.Tensor):
+                ix = ix.cpu().numpy()
+#             print(type(ix))
+#             ix = ix.cpu().numpy()
+            new_x_list.append(ix)
+        new_x = tuple(new_x_list)
+#         x = x.cpu().numpy()
+        app = np.concatenate(new_x, 0)
+        new_stats.append(app)
+    stats = new_stats
+
+#     stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
+    
     if len(stats) and stats[0].any():
         p, r, ap, f1, ap_class = ap_per_class(*stats)
         p, r, ap50, ap = p[:, 0], r[:, 0], ap[:, 0], ap.mean(1)  # [P, R, AP@0.5, AP@0.5:0.95]

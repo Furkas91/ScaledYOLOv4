@@ -24,6 +24,7 @@ def detect(save_img=False):
 
     # Initialize
     device = select_device(opt.device)
+#     print("DEVICE: ", device)
     if os.path.exists(out):
         shutil.rmtree(out)  # delete output folder
     os.makedirs(out)  # make new output folder
@@ -61,6 +62,8 @@ def detect(save_img=False):
     img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
     _ = model(img.half() if half else img) if device.type != 'cpu' else None  # run once
     for path, img, im0s, vid_cap in dataset:
+#         print(img.shape)
+#         print(type(img))
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -69,23 +72,41 @@ def detect(save_img=False):
 
         # Inference
         t1 = time_synchronized()
+#         print()
+#         print(opt.augment)
+#         print(type(opt.augment))
+#         print()
         pred = model(img, augment=opt.augment)[0]
+#         print(pred)
 
         # Apply NMS
+#         print()
+#         print(opt.conf_thres, opt.iou_thres, opt.classes, opt.agnostic_nms)
+#         print(type(opt.conf_thres), type(opt.iou_thres), type(opt.classes). type(opt.agnostic_nms))
+        print()
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
+#         print(pred)
         t2 = time_synchronized()
 
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
+#             print(pred)
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
+            print("Initial Prediction")
+            print(det)
+            print()
             if webcam:  # batch_size >= 1
                 p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
             else:
                 p, s, im0 = path, '', im0s
-
+            
+            print("416 to initial shape")
+            print(im0.shape)
+            print()
+            
             save_path = str(Path(out) / Path(p).name)
             txt_path = str(Path(out) / Path(p).stem) + ('_%g' % dataset.frame if dataset.mode == 'video' else '')
             s += '%gx%g ' % img.shape[2:]  # print string
@@ -93,6 +114,10 @@ def detect(save_img=False):
             if det is not None and len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
+                print("Rescale boxes from img_size to im0 size")
+                print(det)
+#                 det = det.cpu().numpy()
+#                 print(det[:, :4])
 
                 # Print results
                 for c in det[:, -1].unique():
@@ -101,13 +126,20 @@ def detect(save_img=False):
 
                 # Write results
                 for *xyxy, conf, cls in det:
+                    print("Parameters from new DET")
+                    print(*xyxy, conf, cls)
+                    print()
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
+                        print(txt_path)
 
                     if save_img or view_img:  # Add bbox to image
                         label = '%s' % (names[int(cls)])
+                        print("Add bbox to image")
+                        print(label)
+                        print(xyxy)
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=2)
 
             # Print time (inference + NMS)
